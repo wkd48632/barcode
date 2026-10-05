@@ -6,6 +6,17 @@
       svg {
         display: flex;
       }
+      /* 바코드가 그려진 svg만 클릭할 수 있다는 표시 */
+      svg:not(:empty) {
+        cursor: pointer;
+      }
+      /* 인쇄할 때는 클릭한 svg(.printing)만 남기고 나머지(textarea, 다른 svg)는 숨긴다.
+         .printing이 없을 때(Ctrl+P 등으로 직접 인쇄)는 평소처럼 전체가 인쇄된다. */
+      @media print {
+        body:has(.printing) > *:not(.printing) {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -56,6 +67,20 @@
         }
       }
 
+      // 인쇄 대상 표시를 모두 지운다
+      function clearPrinting() {
+        for (const el of document.querySelectorAll('.printing')) {
+          el.classList.remove('printing');
+        }
+      }
+
+      // svg 하나만 인쇄한다
+      function printSvg(svg) {
+        clearPrinting();
+        svg.classList.add('printing');
+        window.print();
+      }
+
       document.addEventListener('DOMContentLoaded', () => {
         const fragment = document.createDocumentFragment();
         for (let i = 0; i < COUNT; i++) {
@@ -65,6 +90,15 @@
         }
         document.body.appendChild(fragment);
         textarea.addEventListener('input', update);
+
+        // svg는 reset()에서 통째로 교체되므로 svg마다 리스너를 달지 않고 body에서 위임받는다
+        document.body.addEventListener('click', (e) => {
+          const svg = e.target.closest('svg');
+          if (svg && svg.hasChildNodes()) printSvg(svg);   // 빈 svg는 무시
+        });
+
+        // 인쇄창이 닫히면 표시를 지운다 (Safari 등은 print()가 창이 닫히기 전에 반환될 수 있음)
+        window.addEventListener('afterprint', clearPrinting);
       });
     </script>
   </body>
