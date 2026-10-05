@@ -1,20 +1,70 @@
 <!DOCTYPE html>
 <html>
   <head>
-    
+    <meta charset="utf-8">
+    <style>
+      svg {
+        display: flex;
+      }
+    </style>
   </head>
   <body>
-    <svg id='barcode'></svg>
-    <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'></script>
+    <textarea id="lines"></textarea>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <script>
-      JsBarcode(
-        '#barcode',
-        "This is test",
-      {
-          format: 'CODE128',
-          width: 2,
-          height: 80,
-          displayValue: true
+      const COUNT = 300;
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const BARCODE_OPTIONS = {
+        format: 'CODE128',
+        width: 2,
+        height: 80,
+        displayValue: true
+      };
+
+      const textarea = document.getElementById('lines');
+      const svgs = [];      // svgs[i] : id가 i인 svg 요소
+      const rendered = [];  // rendered[i] : svgs[i]에 마지막으로 반영한 텍스트
+
+      function createSvg(i) {
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.id = String(i);
+        return svg;
+      }
+
+      // i번 svg를 처음 상태(빈 svg)로 되돌린다
+      function reset(i) {
+        const fresh = createSvg(i);
+        svgs[i].replaceWith(fresh);
+        svgs[i] = fresh;
+      }
+
+      function update() {
+        const lines = textarea.value.split('\n');
+        for (let i = 0; i < COUNT; i++) {
+          const text = i < lines.length ? lines[i] : '';
+          if (text === rendered[i]) continue;   // 바뀐 줄만 다시 그린다
+          rendered[i] = text;
+          if (text === '') {
+            reset(i);
+            continue;
+          }
+          try {
+            JsBarcode(svgs[i], text, BARCODE_OPTIONS);
+          } catch (e) {
+            reset(i);   // CODE128로 인코딩할 수 없는 문자가 있는 줄
+          }
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < COUNT; i++) {
+          svgs[i] = createSvg(i);
+          rendered[i] = '';
+          fragment.appendChild(svgs[i]);
+        }
+        document.body.appendChild(fragment);
+        textarea.addEventListener('input', update);
       });
     </script>
   </body>
